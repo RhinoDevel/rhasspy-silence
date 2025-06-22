@@ -293,6 +293,20 @@ def main():
 
                     break
 
+                # MT: Send recording to standard output.
+                #     Use with commandline parameter "--quiet"
+                #     an e.g. forward data to a file with " > my_rec.wav".
+                with io.BytesIO() as wav_io:
+                    wav_file: wave.Wave_write = wave.open(wav_io, "wb")
+                    with wav_file:
+                        wav_file.setframerate(recorder.sample_rate)
+                        wav_file.setsampwidth(2)
+                        wav_file.setnchannels(1)
+                        wav_file.writeframes(audio_bytes)
+
+                    sys.stdout.buffer.write(wav_io.getvalue())
+                break
+                
                 recorder.start()
 
     except KeyboardInterrupt:
