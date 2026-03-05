@@ -1,5 +1,9 @@
 """Voice command recording using webrtcvad."""
-import audioop
+
+# Marcel Timm, RhinoDevel, 2026mar05 (1/2):
+# - Replaced audioop, because it is no longer available in Python 3.13.
+import numpy as np #import audioop
+
 import logging
 import math
 import typing
@@ -384,16 +388,50 @@ class WebRtcVadRecorder(VoiceCommandRecorder):
 
     # -------------------------------------------------------------------------
 
+    # Marcel Timm, RhinoDevel, 2026mar05 (2/2):
+    # - Replaced audioop usage, because it is no longer available in Python 3.13.
+    # - This code is 100% AI generated, but it seems to work fine..
     @staticmethod
     def get_debiased_energy(audio_data: bytes) -> float:
         """Compute RMS of debiased audio."""
-        # Thanks to the speech_recognition library!
-        # https://github.com/Uberi/speech_recognition/blob/master/speech_recognition/__init__.py
-        energy = -audioop.rms(audio_data, 2)
-        energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
-        debiased_energy = audioop.rms(
-            audioop.add(audio_data, energy_bytes * (len(audio_data) // 2), 2), 2
-        )
 
-        # Probably actually audio if > 30
+        # Convert the byte data to a numpy array of 16-bit integers (audio
+        # data is in raw bytes).
+        audio_array = np.frombuffer(audio_data, dtype=np.int16)
+
+        # Compute root mean square of the audio.
+        energy = np.sqrt(np.mean(audio_array ** 2))
+
+        # Create the energy byte data (energy is a scalar, so we need to
+        # pack it into bytes).
+        # Note: Using np.int16 here to match the exact byte representation of
+        #       energy.
+        energy_bytes = np.array([energy & 0xFF, (energy >> 8) & 0xFF], dtype=np.uint8)
+
+        # Ensure the length of energy_bytes matches the audio data (repeat it
+        # accordingly).
+        energy_bytes_repeated = np.tile(energy_bytes, len(audio_data) // 2)
+        # //2 because we're working with 16-bit data.
+
+        # Convert energy_bytes_repeated into a 16-bit array before addition
+        # (mimicking the byte operations).
+        energy_array = np.frombuffer(energy_bytes_repeated.tobytes(), dtype=np.int16)
+
+        # Add the energy bytes to the audio data (mimicking audioop.add).
+        biased_audio = audio_array + energy_array
+
+        # Compute the debiased energy (RMS of the biased audio).
+        debiased_energy = np.sqrt(np.mean(biased_audio ** 2))
+
+        # Return the debiased energy value.
         return debiased_energy
+
+        # Original code using audioop:
+        #
+        ## Thanks to the speech_recognition library!
+        ## https://github.com/Uberi/speech_recognition/blob/master/speech_recognition/__init__.py
+        #energy = -audioop.rms(audio_data, 2)
+        #energy_bytes = bytes([energy & 0xFF, (energy >> 8) & 0xFF])
+        #debiased_energy = audioop.rms(
+        #    audioop.add(audio_data, energy_bytes * (len(audio_data) // 2), 2), 2
+        #)
