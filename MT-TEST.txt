@@ -1,0 +1,5 @@
+How to test
+-----------
+(Marcel Timm, RhinoDevel, 2026may29)
+
+arecord -D hw:2,0 -r 16000 -c 1 -f S16_LE -t raw | ./rhasspy-silence --silence-seconds 5 --max-seconds 30 --quiet > test.wav
